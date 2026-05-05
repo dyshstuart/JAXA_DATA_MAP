@@ -1,0 +1,2 @@
+# JAXA_DATA_MAP
+JAXAのAPIを使ったマップアプリ
