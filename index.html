@@ -453,6 +453,13 @@ const CATEGORY_DEFAULTS = {
   'Land Cover':{ min: 0,   max: 220 },
 };
 
+// データセットの対応地理範囲（この範囲外のbboxはクランプ）
+const BBOX_LIMITS = {
+  'Precip':   { west: -180, south: -60, east: 180, north: 60, label: '南北緯60°以内' },
+  'SPI':      { west: -180, south: -60, east: 180, north: 60, label: '南北緯60°以内' },
+  'Sea Ice':  { west: -180, south: -90, east: 180, north: 90, label: '極域' },
+};
+
 // ============================================================
 // Helpers
 // ============================================================
@@ -794,7 +801,22 @@ async function fetchData() {
 
   try {
     const bounds = map.getBounds();
-    const bbox = [bounds.getWest(), bounds.getSouth(), bounds.getEast(), bounds.getNorth()];
+    let bbox = [bounds.getWest(), bounds.getSouth(), bounds.getEast(), bounds.getNorth()];
+
+    // データセットの対応範囲でbboxをクランプ
+    const bboxLimit = BBOX_LIMITS[selectedDataset.category];
+    if (bboxLimit) {
+      bbox[0] = Math.max(bbox[0], bboxLimit.west);
+      bbox[1] = Math.max(bbox[1], bboxLimit.south);
+      bbox[2] = Math.min(bbox[2], bboxLimit.east);
+      bbox[3] = Math.min(bbox[3], bboxLimit.north);
+      // クランプ後にbboxが有効か確認
+      if (bbox[0] >= bbox[2] || bbox[1] >= bbox[3]) {
+        setStatus('error', `このデータセットの対応範囲外です（${bboxLimit.label}）`);
+        btn.disabled = false;
+        return;
+      }
+    }
 
     const mapEl = document.getElementById('map');
     const width  = mapEl.clientWidth;
