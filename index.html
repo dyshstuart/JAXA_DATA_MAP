@@ -805,7 +805,21 @@ async function fetchData() {
     const dateStr = buildDateString(selectedDataset.freq);
     if (dateStr) params.date = dateStr;
 
-    const dataObject = await je.getDataObject(params);
+    let dataObject;
+    try {
+      dataObject = await je.getDataObject(params);
+    } catch (bandErr) {
+      // バンド名が違う場合、エラーメッセージから正しいバンド名を取得して再試行
+      const match = bandErr.message && bandErr.message.match(/\b([\w\-]+)\s+(?:is|are)\s+available/i);
+      if (match) {
+        const availableBand = match[1];
+        setStatus('loading', `バンド名を "${availableBand}" に修正して再取得中...`);
+        params.band = availableBand;
+        dataObject = await je.getDataObject(params);
+      } else {
+        throw bandErr;
+      }
+    }
 
     // Auto-scale: try reading values from dataObject
     const autoScale = document.getElementById('auto-scale').checked;
