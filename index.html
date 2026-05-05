@@ -482,10 +482,12 @@ function makeYearOptions(ds, selectedYear) {
 // ============================================================
 // Map
 // ============================================================
-const map = L.map('map', { zoomControl: true }).setView([48, 10], 3);
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-  attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-  maxZoom: 18,
+const map = L.map('map', { crs: L.CRS.EPSG4326, zoomControl: true }).setView([20, 10], 2);
+L.tileLayer.wms('https://ows.terrestris.de/osm/service', {
+  layers: 'OSM-WMS',
+  format: 'image/png',
+  version: '1.1.1',
+  attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors | terrestris',
 }).addTo(map);
 
 let currentOverlay = null;
