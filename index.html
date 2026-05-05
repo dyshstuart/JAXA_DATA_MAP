@@ -1,0 +1,924 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>JAXA Earth API ビューア</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', 'Hiragino Sans', sans-serif;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      background: #0f1623;
+      color: #dce6f5;
+      overflow: hidden;
+    }
+
+    /* ── Header ── */
+    #header {
+      background: #080e18;
+      padding: 10px 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border-bottom: 1px solid #1e2d45;
+      flex-shrink: 0;
+      z-index: 1000;
+    }
+    #header h1 { font-size: 15px; font-weight: 600; color: #6fb3ff; letter-spacing: 0.03em; }
+    #header .subtitle { font-size: 11px; color: #4a6080; margin-left: auto; }
+
+    /* ── Layout ── */
+    #main { display: flex; flex: 1; overflow: hidden; }
+
+    /* ── Sidebar ── */
+    #sidebar {
+      width: 300px;
+      min-width: 260px;
+      background: #111827;
+      border-right: 1px solid #1e2d45;
+      overflow-y: auto;
+      flex-shrink: 0;
+      padding: 12px 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .section {
+      background: #0f1623;
+      border: 1px solid #1e2d45;
+      border-radius: 6px;
+      padding: 10px;
+    }
+    .section-title {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: #6fb3ff;
+      margin-bottom: 8px;
+      padding-bottom: 5px;
+      border-bottom: 1px solid #1e2d45;
+    }
+
+    label.field-label {
+      display: block;
+      font-size: 11px;
+      color: #7a92b0;
+      margin-bottom: 3px;
+      margin-top: 6px;
+    }
+    label.field-label:first-child { margin-top: 0; }
+
+    select, input[type="text"], input[type="number"] {
+      width: 100%;
+      background: #080e18;
+      border: 1px solid #1e2d45;
+      color: #dce6f5;
+      padding: 5px 7px;
+      border-radius: 4px;
+      font-size: 12px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    select:focus, input:focus { border-color: #6fb3ff; }
+    select:disabled, input:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+    }
+
+    /* ── Day/Night radio ── */
+    .radio-group {
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+    .radio-group label {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 12px;
+      cursor: pointer;
+      color: #dce6f5;
+      padding: 4px 8px;
+      border: 1px solid #1e2d45;
+      border-radius: 4px;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .radio-group label:has(input:checked) {
+      border-color: #6fb3ff;
+      background: #0d1f38;
+    }
+    .radio-group.disabled label {
+      opacity: 0.3;
+      cursor: not-allowed;
+      pointer-events: none;
+    }
+
+    /* ── Sliders ── */
+    .slider-wrap {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    input[type="range"] {
+      flex: 1;
+      accent-color: #6fb3ff;
+      cursor: pointer;
+    }
+    .slider-val {
+      min-width: 52px;
+      font-size: 11px;
+      color: #6fb3ff;
+      text-align: right;
+    }
+
+    .date-display {
+      margin-top: 6px;
+      text-align: center;
+      font-size: 12px;
+      color: #4ade80;
+      min-height: 16px;
+    }
+
+    /* ── Place search ── */
+    .place-row { display: flex; gap: 6px; }
+    .place-row input { flex: 1; }
+    #place-results {
+      margin-top: 6px;
+      font-size: 11px;
+      max-height: 100px;
+      overflow-y: auto;
+    }
+    .place-result-item {
+      padding: 4px 0;
+      border-bottom: 1px solid #1e2d45;
+      cursor: pointer;
+      color: #7a92b0;
+      transition: color 0.15s;
+    }
+    .place-result-item:hover { color: #6fb3ff; }
+
+    /* ── Color scale ── */
+    .auto-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 6px;
+    }
+    .auto-row label { margin: 0; font-size: 12px; color: #dce6f5; cursor: pointer; }
+    .minmax-row { display: flex; gap: 8px; }
+    .minmax-row > div { flex: 1; }
+
+    /* ── Buttons ── */
+    .btn {
+      padding: 5px 11px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+      font-family: inherit;
+      transition: background 0.15s, opacity 0.15s;
+    }
+    .btn-sm { background: #1e2d45; color: #dce6f5; }
+    .btn-sm:hover { background: #263d5a; }
+
+    #fetch-btn {
+      width: 100%;
+      padding: 10px;
+      background: linear-gradient(135deg, #1d4ed8, #2563eb);
+      color: white;
+      font-size: 13px;
+      font-weight: 600;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: opacity 0.2s;
+      font-family: inherit;
+    }
+    #fetch-btn:hover:not(:disabled) { opacity: 0.88; }
+    #fetch-btn:disabled {
+      background: #1e2d45;
+      color: #3a5070;
+      cursor: not-allowed;
+    }
+
+    #status {
+      font-size: 11px;
+      color: #4a6080;
+      min-height: 14px;
+      text-align: center;
+    }
+    #status.loading { color: #fbbf24; }
+    #status.success { color: #4ade80; }
+    #status.error   { color: #f87171; }
+
+    /* ── Map ── */
+    #map-container { flex: 1; position: relative; }
+    #map { width: 100%; height: 100%; }
+
+    /* ── Overlay info ── */
+    #overlay-info {
+      position: absolute;
+      bottom: 24px;
+      right: 10px;
+      background: rgba(8,14,24,0.85);
+      border: 1px solid #1e2d45;
+      border-radius: 6px;
+      padding: 8px 12px;
+      font-size: 11px;
+      color: #7a92b0;
+      z-index: 999;
+      display: none;
+      max-width: 240px;
+    }
+    #overlay-info .oi-title { color: #6fb3ff; font-weight: 600; margin-bottom: 3px; }
+
+    /* ── Responsive ── */
+    @media (max-width: 700px) {
+      #main { flex-direction: column; }
+      #sidebar {
+        width: 100%;
+        max-height: 45vh;
+        border-right: none;
+        border-bottom: 1px solid #1e2d45;
+        flex-direction: row;
+        flex-wrap: wrap;
+        gap: 8px;
+        padding: 8px;
+      }
+      #sidebar .section { flex: 1 1 250px; }
+    }
+  </style>
+</head>
+<body>
+
+<div id="header">
+  <span style="font-size:18px">🛰️</span>
+  <h1>JAXA Earth API ビューア</h1>
+  <span class="subtitle">衛星データ可視化ツール</span>
+</div>
+
+<div id="main">
+  <div id="sidebar">
+
+    <!-- ① Dataset -->
+    <div class="section">
+      <div class="section-title">データセット選択</div>
+
+      <label class="field-label">カテゴリ</label>
+      <select id="sel-category">
+        <option value="">-- カテゴリを選択 --</option>
+      </select>
+
+      <label class="field-label">頻度</label>
+      <select id="sel-freq" disabled>
+        <option value="">-- 頻度を選択 --</option>
+      </select>
+
+      <label class="field-label">昼夜</label>
+      <div class="radio-group disabled" id="daynight-group">
+        <label><input type="radio" name="daynight" value="daytime" checked> 昼間</label>
+        <label><input type="radio" name="daynight" value="nighttime"> 夜間</label>
+      </div>
+
+      <label class="field-label">データセット</label>
+      <select id="sel-dataset" disabled>
+        <option value="">-- データセットを選択 --</option>
+      </select>
+    </div>
+
+    <!-- ② Time -->
+    <div class="section">
+      <div class="section-title">時間指定</div>
+      <div id="time-controls">
+        <div style="font-size:12px;color:#4a6080;">データセットを選択してください</div>
+      </div>
+    </div>
+
+    <!-- ③ Place -->
+    <div class="section">
+      <div class="section-title">地域指定（地名検索）</div>
+      <div class="place-row">
+        <input type="text" id="place-input" placeholder="例: Japan, Paris, 東京">
+        <button class="btn btn-sm" id="place-search-btn">検索</button>
+      </div>
+      <div id="place-results"></div>
+    </div>
+
+    <!-- ④ Color -->
+    <div class="section">
+      <div class="section-title">カラーマップ設定</div>
+      <div class="auto-row">
+        <input type="checkbox" id="auto-scale" checked>
+        <label for="auto-scale">自動スケール</label>
+      </div>
+      <div id="minmax-inputs" style="display:none;">
+        <div class="minmax-row">
+          <div>
+            <label class="field-label">最小値（MIN）</label>
+            <input type="number" id="color-min" placeholder="0" value="0">
+          </div>
+          <div>
+            <label class="field-label">最大値（MAX）</label>
+            <input type="number" id="color-max" placeholder="100" value="100">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ⑤ Fetch -->
+    <button id="fetch-btn" disabled>🛰️ データを取得</button>
+    <div id="status"></div>
+
+  </div><!-- /sidebar -->
+
+  <div id="map-container">
+    <div id="map"></div>
+    <div id="overlay-info">
+      <div class="oi-title" id="oi-title"></div>
+      <div id="oi-date"></div>
+      <div id="oi-range"></div>
+    </div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://data.earth.jaxa.jp/api/javascript/v2.0.0/jaxa.earth.umd.js"></script>
+<script>
+'use strict';
+
+// ============================================================
+// Dataset definitions
+// ============================================================
+const DATASETS = [
+  { id:"NASA.EOSDIS_Terra.MODIS_MOD11C1-LST.daytime.v061_global_daily",       category:"LST", band:"LST_Day_CMG",    freq:"Daily",              sensor:"Terra MODIS",    start:2000, end:null },
+  { id:"NASA.EOSDIS_Terra.MODIS_MOD11C1-LST.daytime.v061_global_half-monthly",category:"LST", band:"LST_Day_CMG",    freq:"Half-monthly",       sensor:"Terra MODIS",    start:2000, end:null },
+  { id:"NASA.EOSDIS_Terra.MODIS_MOD11C3-LST.daytime.v061_global_monthly",     category:"LST", band:"LST_Day_CMG",    freq:"Monthly",            sensor:"Terra MODIS",    start:2000, end:null },
+  { id:"NASA.EOSDIS_Terra.MODIS_MOD11C1-LST.nighttime.v061_global_daily",     category:"LST", band:"LST_Night_CMG",  freq:"Daily",              sensor:"Terra MODIS",    start:2000, end:null },
+  { id:"NASA.EOSDIS_Terra.MODIS_MOD11C1-LST.nighttime.v061_global_half-monthly",category:"LST",band:"LST_Night_CMG", freq:"Half-monthly",       sensor:"Terra MODIS",    start:2000, end:null },
+  { id:"NASA.EOSDIS_Terra.MODIS_MOD11C3-LST.nighttime.v061_global_monthly",   category:"LST", band:"LST_Night_CMG",  freq:"Monthly",            sensor:"Terra MODIS",    start:2000, end:null },
+  { id:"JAXA.G-Portal_GCOM-C.SGLI_standard.L3-LST.daytime.v3_global_daily",   category:"LST", band:"LST_D",          freq:"Daily",              sensor:"GCOM-C/SGLI",    start:2018, end:null },
+  { id:"JAXA.G-Portal_GCOM-C.SGLI_standard.L3-LST.daytime.v3_global_monthly", category:"LST", band:"LST_D",          freq:"Monthly",            sensor:"GCOM-C/SGLI",    start:2018, end:null },
+  { id:"JAXA.G-Portal_GCOM-C.SGLI_standard.L3-LST.nighttime.v3_global_daily", category:"LST", band:"LST_N",          freq:"Daily",              sensor:"GCOM-C/SGLI",    start:2018, end:null },
+  { id:"JAXA.G-Portal_GCOM-C.SGLI_standard.L3-LST.nighttime.v3_global_monthly",category:"LST",band:"LST_N",          freq:"Monthly",            sensor:"GCOM-C/SGLI",    start:2018, end:null },
+  { id:"JAXA.JASMES_GCOM-C.SGLI_standard.L3-LST.daytime.v3_global_8-day",    category:"LST", band:"LST_D",          freq:"8-day",              sensor:"GCOM-C/SGLI",    start:2020, end:null },
+  { id:"JAXA.JASMES_GCOM-C.SGLI_standard.L3-LST.nighttime.v3_global_8-day",  category:"LST", band:"LST_N",          freq:"8-day",              sensor:"GCOM-C/SGLI",    start:2020, end:null },
+  { id:"JAXA.JASMES_GCOM-C.SGLI_standard.L2-LST.daytime.v3_japan_8-day",     category:"LST", band:"LST_D",          freq:"8-day",              sensor:"GCOM-C/SGLI（日本）", start:2020, end:null },
+  { id:"JAXA.JASMES_GCOM-C.SGLI_standard.L2-LST.nighttime.v3_japan_8-day",   category:"LST", band:"LST_N",          freq:"8-day",              sensor:"GCOM-C/SGLI（日本）", start:2020, end:null },
+  { id:"JAXA.JASMES_GCOM-C.SGLI_standard.L3-LST.daytime.v3_global_8-day-normal",  category:"LST", band:"LST_D",     freq:"Normal (climatology)",sensor:"GCOM-C/SGLI",    start:2000, end:2022 },
+  { id:"JAXA.JASMES_GCOM-C.SGLI_standard.L3-LST.nighttime.v3_global_monthly-normal",category:"LST",band:"LST_N",    freq:"Normal (climatology)",sensor:"GCOM-C/SGLI",    start:2000, end:2022 },
+  { id:"JAXA.G-Portal_GCOM-C.SGLI_standard.L3-SST.daytime.v3_global_daily",  category:"SST", band:"SST",            freq:"Daily",              sensor:"GCOM-C/SGLI",    start:2024, end:null },
+  { id:"JAXA.G-Portal_GCOM-C.SGLI_standard.L3-SST.daytime.v3_global_monthly",category:"SST", band:"SST",            freq:"Monthly",            sensor:"GCOM-C/SGLI",    start:2024, end:null },
+  { id:"JAXA.G-Portal_GCOM-C.SGLI_standard.L3-SST.nighttime.v3_global_daily",category:"SST", band:"SST",            freq:"Daily",              sensor:"GCOM-C/SGLI",    start:2024, end:null },
+  { id:"JAXA.G-Portal_GCOM-C.SGLI_standard.L3-SST.nighttime.v3_global_monthly",category:"SST",band:"SST",           freq:"Monthly",            sensor:"GCOM-C/SGLI",    start:2024, end:null },
+  { id:"JAXA.G-Portal_GCOM-W.AMSR2_standard.L3-SST.daytime.v4_global_daily",  category:"SST", band:"SST",           freq:"Daily",              sensor:"GCOM-W/AMSR2",   start:2012, end:null },
+  { id:"JAXA.G-Portal_GCOM-W.AMSR2_standard.L3-SST.nighttime.v4_global_daily",category:"SST", band:"SST",           freq:"Daily",              sensor:"GCOM-W/AMSR2",   start:2012, end:null },
+  { id:"JAXA.G-Portal_GCOM-W.AMSR2_standard.L3-SMC.daytime.v3_global_daily",  category:"SMC", band:"SM_D",          freq:"Daily",              sensor:"GCOM-W/AMSR2",   start:2012, end:null },
+  { id:"JAXA.G-Portal_GCOM-W.AMSR2_standard.L3-SMC.daytime.v3_global_monthly",category:"SMC", band:"SM_D",          freq:"Monthly",            sensor:"GCOM-W/AMSR2",   start:2012, end:null },
+  { id:"JAXA.G-Portal_GCOM-W.AMSR2_standard.L3-SMC.nighttime.v3_global_daily",category:"SMC", band:"SM_N",          freq:"Daily",              sensor:"GCOM-W/AMSR2",   start:2012, end:null },
+  { id:"JAXA.G-Portal_GCOM-W.AMSR2_standard.L3-SMC.nighttime.v3_global_monthly",category:"SMC",band:"SM_N",         freq:"Monthly",            sensor:"GCOM-W/AMSR2",   start:2012, end:null },
+  { id:"JAXA.G-Portal_Aqua.AMSR-E_standard.L3-SMC.daytime.v3_global_daily",   category:"SMC", band:"SM_D",          freq:"Daily",              sensor:"Aqua/AMSR-E",    start:2002, end:2011 },
+  { id:"JAXA.G-Portal_Aqua.AMSR-E_standard.L3-SMC.daytime.v3_global_monthly", category:"SMC", band:"SM_D",          freq:"Monthly",            sensor:"Aqua/AMSR-E",    start:2002, end:2011 },
+  { id:"JAXA.G-Portal_GCOM-C.SGLI_standard.L3-NDVI.daytime.v3_global_daily",  category:"NDVI",band:"NDVI",          freq:"Daily",              sensor:"GCOM-C/SGLI",    start:2018, end:null },
+  { id:"JAXA.G-Portal_GCOM-C.SGLI_standard.L3-NDVI.daytime.v3_global_monthly",category:"NDVI",band:"NDVI",          freq:"Monthly",            sensor:"GCOM-C/SGLI",    start:2018, end:null },
+  { id:"JAXA.JASMES_GCOM-C.SGLI_standard.L2-NDVI.daytime.v3_japan_8-day",    category:"NDVI",band:"NDVI",           freq:"8-day",              sensor:"GCOM-C/SGLI（日本）", start:2020, end:null },
+  { id:"JAXA.JASMES_Terra.MODIS-Aqua.MODIS_ndvi.v811_global_half-monthly",    category:"NDVI",band:"NDVI",           freq:"Half-monthly",       sensor:"Terra+Aqua MODIS",start:2002, end:null },
+  { id:"JAXA.JASMES_Terra.MODIS-Aqua.MODIS_ndvi.v811_global_monthly",         category:"NDVI",band:"NDVI",           freq:"Monthly",            sensor:"Terra+Aqua MODIS",start:2002, end:null },
+  { id:"JAXA.EORC_GSMaP_standard.Gauge.00Z-23Z.v6_daily",                     category:"Precip",band:"hourlyPrecipRate",freq:"Daily",           sensor:"GSMaP/GPM",      start:2000, end:null },
+  { id:"JAXA.EORC_GSMaP_standard.Gauge.00Z-23Z.v6_half-monthly",              category:"Precip",band:"hourlyPrecipRate",freq:"Half-monthly",    sensor:"GSMaP/GPM",      start:2000, end:null },
+  { id:"JAXA.EORC_GSMaP_standard.Gauge.00Z-23Z.v6_monthly",                   category:"Precip",band:"hourlyPrecipRate",freq:"Monthly",         sensor:"GSMaP/GPM",      start:2000, end:null },
+  { id:"JAXA.EORC_GSMaP_SPI.climate.gnrt6_monthly",                            category:"SPI",  band:"SPI",          freq:"Monthly",            sensor:"GSMaP/GPM",      start:2019, end:null },
+  { id:"JAXA.G-Portal_GCOM-C.SGLI_standard.L3-AROT.daytime.v3_global_daily",  category:"AOD",  band:"AROT_670",     freq:"Daily",              sensor:"GCOM-C/SGLI",    start:2018, end:null },
+  { id:"JAXA.G-Portal_GCOM-C.SGLI_standard.L3-AROT.daytime.v3_global_monthly",category:"AOD",  band:"AROT_670",     freq:"Monthly",            sensor:"GCOM-C/SGLI",    start:2018, end:null },
+  { id:"JAXA.JASMES_Terra.MODIS-Aqua.MODIS_taua.v811_global_daily",            category:"AOD",  band:"taua_550",     freq:"Daily",              sensor:"Terra+Aqua MODIS",start:2013, end:null },
+  { id:"JAXA.JASMES_Terra.MODIS-Aqua.MODIS_taua.v811_global_monthly",          category:"AOD",  band:"taua_550",     freq:"Monthly",            sensor:"Terra+Aqua MODIS",start:2002, end:null },
+  { id:"JAXA.JASMES_Aqua.MODIS_swr.v811_global_daily",                         category:"SWR",  band:"swr",          freq:"Daily",              sensor:"Aqua MODIS",     start:2002, end:null },
+  { id:"JAXA.JASMES_Aqua.MODIS_swr.v811_global_monthly",                       category:"SWR",  band:"swr",          freq:"Monthly",            sensor:"Aqua MODIS",     start:2002, end:null },
+  { id:"JAXA.JASMES_Terra.MODIS_swr.v811_global_daily",                        category:"SWR",  band:"swr",          freq:"Daily",              sensor:"Terra MODIS",    start:2002, end:null },
+  { id:"JAXA.JASMES_Terra.MODIS_swr.v811_global_monthly",                      category:"SWR",  band:"swr",          freq:"Monthly",            sensor:"Terra MODIS",    start:2002, end:null },
+  { id:"JAXA.G-Portal_GCOM-C.SGLI_standard.L3-CHLA.daytime.v3_global_daily",  category:"Chl-a",band:"CHLA",         freq:"Daily",              sensor:"GCOM-C/SGLI",    start:2024, end:null },
+  { id:"JAXA.G-Portal_GCOM-C.SGLI_standard.L3-CHLA.daytime.v3_global_monthly",category:"Chl-a",band:"CHLA",         freq:"Monthly",            sensor:"GCOM-C/SGLI",    start:2024, end:null },
+  { id:"JAXA.JASMES_GCOM-W.AMSR2_ic0.v201_north_daily",                        category:"Sea Ice",band:"ic0",        freq:"Daily",              sensor:"GCOM-W/AMSR2（北極）",start:2012,end:null },
+  { id:"JAXA.JASMES_GCOM-W.AMSR2_ic0.v201_south_daily",                        category:"Sea Ice",band:"ic0",        freq:"Daily",              sensor:"GCOM-W/AMSR2（南極）",start:2012,end:null },
+  { id:"JAXA.EORC_ALOS-2.PALSAR-2_FNF.v2.1.0_global_yearly",                  category:"FNF",  band:"C",            freq:"Yearly",             sensor:"ALOS-2/PALSAR-2",start:2017, end:null },
+  { id:"JAXA.EORC_ALOS.PRISM_AW3D30.v3.2_global",                              category:"DSM",  band:"DSM",          freq:"Static",             sensor:"ALOS/PRISM",     start:2021, end:2021 },
+  { id:"Copernicus.C3S_PROBA-V_LCCS_global_yearly",                             category:"Land Cover",band:"lccs_class",freq:"Yearly",          sensor:"PROBA-V/ESA",    start:1992, end:2019 },
+];
+
+const CATEGORY_LABELS = {
+  'LST':        '🌡️ 地表面温度',
+  'SST':        '🌊 海面水温',
+  'SMC':        '💧 土壌水分',
+  'NDVI':       '🌿 植生指数（NDVI）',
+  'Precip':     '🌧️ 降水量',
+  'SPI':        '📉 標準化降水指数（SPI）',
+  'AOD':        '🌫️ エアロゾル光学的厚さ',
+  'SWR':        '☀️ 短波放射',
+  'Chl-a':      '🔬 クロロフィルa濃度',
+  'Sea Ice':    '🧊 海氷密接度',
+  'FNF':        '🌲 森林/非森林マップ',
+  'DSM':        '⛰️ 数値標高モデル（DSM）',
+  'Land Cover': '🗺️ 土地被覆分類',
+};
+
+const FREQ_LABELS = {
+  'Daily':               '日次',
+  'Monthly':             '月次',
+  'Half-monthly':        '半月次（月2回）',
+  '8-day':               '8日次',
+  'Yearly':              '年次',
+  'Static':              '静的（固定データ）',
+  'Normal (climatology)':'平年値（気候値）',
+};
+
+// Sensible default ranges per category for auto-scale fallback
+const CATEGORY_DEFAULTS = {
+  'LST':       { min: -10, max: 60 },
+  'SST':       { min: -2,  max: 35 },
+  'SMC':       { min: 0,   max: 0.6 },
+  'NDVI':      { min: -1,  max: 1 },
+  'Precip':    { min: 0,   max: 10 },
+  'SPI':       { min: -3,  max: 3 },
+  'AOD':       { min: 0,   max: 1 },
+  'SWR':       { min: 0,   max: 400 },
+  'Chl-a':     { min: 0,   max: 10 },
+  'Sea Ice':   { min: 0,   max: 100 },
+  'FNF':       { min: 0,   max: 2 },
+  'DSM':       { min: 0,   max: 3000 },
+  'Land Cover':{ min: 0,   max: 220 },
+};
+
+// ============================================================
+// Helpers
+// ============================================================
+function getDayNight(ds) {
+  if (ds.id.includes('.daytime.'))  return 'daytime';
+  if (ds.id.includes('.nighttime.')) return 'nighttime';
+  return null;
+}
+
+function pad(n) { return String(n).padStart(2, '0'); }
+
+function endYear(ds) {
+  return ds.end !== null ? ds.end : new Date().getFullYear();
+}
+
+function makeYearOptions(ds, selectedYear) {
+  const sy = ds.start;
+  const ey = endYear(ds);
+  const sel = selectedYear || ey;
+  let opts = '';
+  for (let y = ey; y >= sy; y--) {
+    opts += `<option value="${y}"${y === sel ? ' selected' : ''}>${y}年</option>`;
+  }
+  return opts;
+}
+
+// ============================================================
+// Map
+// ============================================================
+const map = L.map('map', { zoomControl: true }).setView([48, 10], 3);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+  maxZoom: 18,
+}).addTo(map);
+
+let currentOverlay = null;
+
+// ============================================================
+// UI State
+// ============================================================
+let selectedDataset = null;
+
+// Populate category
+const selCategory = document.getElementById('sel-category');
+const orderedCategories = ['LST','SST','SMC','NDVI','Precip','SPI','AOD','SWR','Chl-a','Sea Ice','FNF','DSM','Land Cover'];
+orderedCategories.forEach(cat => {
+  const opt = document.createElement('option');
+  opt.value = cat;
+  opt.textContent = CATEGORY_LABELS[cat] || cat;
+  selCategory.appendChild(opt);
+});
+
+const selFreq    = document.getElementById('sel-freq');
+const selDataset = document.getElementById('sel-dataset');
+const dnGroup    = document.getElementById('daynight-group');
+
+// ============================================================
+// Cascading select logic
+// ============================================================
+selCategory.addEventListener('change', () => {
+  rebuildFreq();
+  rebuildDaynight();
+  rebuildDataset();
+  updateFetchBtn();
+});
+
+selFreq.addEventListener('change', () => {
+  rebuildDaynight();
+  rebuildDataset();
+  updateFetchBtn();
+});
+
+document.querySelectorAll('input[name="daynight"]').forEach(r =>
+  r.addEventListener('change', () => { rebuildDataset(); updateFetchBtn(); })
+);
+
+selDataset.addEventListener('change', () => {
+  selectedDataset = DATASETS.find(d => d.id === selDataset.value) || null;
+  renderTimeControls(selectedDataset);
+  updateFetchBtn();
+});
+
+function getCheckedDaynight() {
+  return document.querySelector('input[name="daynight"]:checked')?.value ?? 'daytime';
+}
+
+function rebuildFreq() {
+  const cat = selCategory.value;
+  selFreq.innerHTML = '<option value="">-- 頻度を選択 --</option>';
+  if (!cat) { selFreq.disabled = true; return; }
+
+  const freqs = [...new Set(DATASETS.filter(d => d.category === cat).map(d => d.freq))];
+  freqs.forEach(f => {
+    const o = document.createElement('option');
+    o.value = f; o.textContent = FREQ_LABELS[f] || f;
+    selFreq.appendChild(o);
+  });
+  selFreq.disabled = false;
+
+  // Auto-select if only one
+  if (freqs.length === 1) selFreq.value = freqs[0];
+}
+
+function rebuildDaynight() {
+  const cat  = selCategory.value;
+  const freq = selFreq.value;
+  const pool = DATASETS.filter(d => d.category === cat && (!freq || d.freq === freq));
+  const hasDN = pool.some(d => getDayNight(d) !== null);
+
+  dnGroup.classList.toggle('disabled', !hasDN);
+  dnGroup.querySelectorAll('input').forEach(r => r.disabled = !hasDN);
+}
+
+function rebuildDataset() {
+  const cat  = selCategory.value;
+  const freq = selFreq.value;
+  selDataset.innerHTML = '<option value="">-- データセットを選択 --</option>';
+  selectedDataset = null;
+
+  if (!cat || !freq) { selDataset.disabled = true; renderTimeControls(null); return; }
+
+  let pool = DATASETS.filter(d => d.category === cat && d.freq === freq);
+  const hasDN = pool.some(d => getDayNight(d) !== null);
+  if (hasDN) pool = pool.filter(d => getDayNight(d) === getCheckedDaynight());
+
+  pool.forEach(d => {
+    const o = document.createElement('option');
+    o.value = d.id;
+    o.textContent = d.sensor;
+    selDataset.appendChild(o);
+  });
+
+  selDataset.disabled = pool.length === 0;
+
+  if (pool.length === 1) {
+    selDataset.value = pool[0].id;
+    selectedDataset = pool[0];
+  }
+  renderTimeControls(selectedDataset);
+}
+
+// ============================================================
+// Time Controls
+// ============================================================
+function renderTimeControls(ds) {
+  const container = document.getElementById('time-controls');
+  if (!ds) {
+    container.innerHTML = '<div style="font-size:12px;color:#4a6080;">データセットを選択してください</div>';
+    return;
+  }
+
+  const freq = ds.freq;
+
+  if (freq === 'Static') {
+    container.innerHTML = '<div style="font-size:12px;color:#4a6080;">固定データのため時間指定不要</div>';
+    return;
+  }
+  if (freq === 'Normal (climatology)') {
+    container.innerHTML = '<div style="font-size:12px;color:#4a6080;">平年値データのため時間指定不要</div>';
+    return;
+  }
+
+  const yearOpts = makeYearOptions(ds);
+
+  let html = `<label class="field-label">年</label>
+    <select id="tc-year">${yearOpts}</select>`;
+
+  if (freq === 'Daily') {
+    const monthOpts = Array.from({length:12},(_,i)=>`<option value="${i+1}">${i+1}月</option>`).join('');
+    html += `
+    <label class="field-label">月</label>
+    <select id="tc-month-sel">${monthOpts}</select>
+    <label class="field-label">日</label>
+    <div class="slider-wrap">
+      <input type="range" id="tc-day" min="1" max="31" value="1">
+      <span class="slider-val" id="tc-day-val">1日</span>
+    </div>`;
+
+  } else if (freq === 'Monthly') {
+    html += `
+    <label class="field-label">月</label>
+    <div class="slider-wrap">
+      <input type="range" id="tc-month" min="1" max="12" value="1">
+      <span class="slider-val" id="tc-month-val">1月</span>
+    </div>`;
+
+  } else if (freq === 'Half-monthly') {
+    html += `
+    <label class="field-label">期（1〜24 ／ 奇数=前半・偶数=後半）</label>
+    <div class="slider-wrap">
+      <input type="range" id="tc-hm" min="1" max="24" value="1">
+      <span class="slider-val" id="tc-hm-val">1月前半</span>
+    </div>`;
+
+  } else if (freq === '8-day') {
+    html += `
+    <label class="field-label">8日期（1〜46）</label>
+    <div class="slider-wrap">
+      <input type="range" id="tc-8d" min="1" max="46" value="1">
+      <span class="slider-val" id="tc-8d-val">第1期</span>
+    </div>`;
+
+  } else if (freq === 'Yearly') {
+    // year select is sufficient
+  }
+
+  html += `<div class="date-display" id="tc-display"></div>`;
+  container.innerHTML = html;
+
+  // Wire up listeners
+  document.getElementById('tc-year')?.addEventListener('change', () => syncTimeDisplay(freq));
+
+  if (freq === 'Daily') {
+    document.getElementById('tc-month-sel').addEventListener('change', () => {
+      clampDaySlider();
+      syncTimeDisplay(freq);
+    });
+    document.getElementById('tc-day').addEventListener('input', function() {
+      document.getElementById('tc-day-val').textContent = this.value + '日';
+      syncTimeDisplay(freq);
+    });
+  } else if (freq === 'Monthly') {
+    document.getElementById('tc-month').addEventListener('input', function() {
+      document.getElementById('tc-month-val').textContent = this.value + '月';
+      syncTimeDisplay(freq);
+    });
+  } else if (freq === 'Half-monthly') {
+    document.getElementById('tc-hm').addEventListener('input', function() {
+      const m = Math.ceil(this.value / 2);
+      const h = this.value % 2 === 1 ? '前半' : '後半';
+      document.getElementById('tc-hm-val').textContent = `${m}月${h}`;
+      syncTimeDisplay(freq);
+    });
+  } else if (freq === '8-day') {
+    document.getElementById('tc-8d').addEventListener('input', function() {
+      syncTimeDisplay(freq);
+    });
+  }
+
+  syncTimeDisplay(freq);
+}
+
+function clampDaySlider() {
+  const year  = parseInt(document.getElementById('tc-year')?.value || new Date().getFullYear());
+  const month = parseInt(document.getElementById('tc-month-sel')?.value || 1);
+  const max   = new Date(year, month, 0).getDate();
+  const slider = document.getElementById('tc-day');
+  if (!slider) return;
+  slider.max = max;
+  if (parseInt(slider.value) > max) slider.value = max;
+  document.getElementById('tc-day-val').textContent = slider.value + '日';
+}
+
+function get8DayStartDate(year, period) {
+  const d = new Date(year, 0, 1);
+  d.setDate(1 + (period - 1) * 8);
+  return d;
+}
+
+function syncTimeDisplay(freq) {
+  const el = document.getElementById('tc-display');
+  if (!el) return;
+  const year = document.getElementById('tc-year')?.value;
+  let text = '';
+
+  if (freq === 'Yearly') {
+    text = `選択: ${year}年`;
+  } else if (freq === 'Monthly') {
+    const m = document.getElementById('tc-month')?.value;
+    text = `選択: ${year}年 ${m}月`;
+  } else if (freq === 'Daily') {
+    const m = document.getElementById('tc-month-sel')?.value;
+    const d = document.getElementById('tc-day')?.value;
+    text = `選択: ${year}年 ${m}月 ${d}日`;
+  } else if (freq === 'Half-monthly') {
+    const v = parseInt(document.getElementById('tc-hm')?.value || 1);
+    const m = Math.ceil(v / 2);
+    const h = v % 2 === 1 ? '前半' : '後半';
+    text = `選択: ${year}年 ${m}月${h}`;
+  } else if (freq === '8-day') {
+    const p = parseInt(document.getElementById('tc-8d')?.value || 1);
+    const d = get8DayStartDate(year, p);
+    const ms = d.getMonth() + 1;
+    text = `選択: ${year}年 第${p}期（${ms}/${d.getDate()}〜）`;
+    document.getElementById('tc-8d-val').textContent = `第${p}期（${ms}/${d.getDate()}〜）`;
+  }
+  el.textContent = text;
+}
+
+function buildDateString(freq) {
+  if (freq === 'Static' || freq === 'Normal (climatology)') return null;
+
+  const year = document.getElementById('tc-year')?.value;
+  if (!year) return null;
+
+  if (freq === 'Yearly')  return year;
+
+  if (freq === 'Monthly') {
+    const m = document.getElementById('tc-month')?.value;
+    return `${year}-${pad(m)}`;
+  }
+  if (freq === 'Daily') {
+    const m = document.getElementById('tc-month-sel')?.value;
+    const d = document.getElementById('tc-day')?.value;
+    return `${year}-${pad(m)}-${pad(d)}`;
+  }
+  if (freq === 'Half-monthly') {
+    const v = parseInt(document.getElementById('tc-hm')?.value || 1);
+    const m = Math.ceil(v / 2);
+    const d = v % 2 === 1 ? 1 : 16;
+    return `${year}-${pad(m)}-${pad(d)}`;
+  }
+  if (freq === '8-day') {
+    const p = parseInt(document.getElementById('tc-8d')?.value || 1);
+    const dt = get8DayStartDate(year, p);
+    return `${year}-${pad(dt.getMonth()+1)}-${pad(dt.getDate())}`;
+  }
+  return null;
+}
+
+// ============================================================
+// Fetch
+// ============================================================
+function updateFetchBtn() {
+  document.getElementById('fetch-btn').disabled = !selectedDataset;
+}
+
+document.getElementById('fetch-btn').addEventListener('click', fetchData);
+
+async function fetchData() {
+  if (!selectedDataset) return;
+
+  const status = document.getElementById('status');
+  const btn    = document.getElementById('fetch-btn');
+
+  setStatus('loading', '取得中...');
+  btn.disabled = true;
+
+  try {
+    const bounds = map.getBounds();
+    const bbox = [bounds.getWest(), bounds.getSouth(), bounds.getEast(), bounds.getNorth()];
+
+    const mapEl = document.getElementById('map');
+    const width  = mapEl.clientWidth;
+    const height = mapEl.clientHeight;
+
+    const collectionUrl = `https://s3.ap-northeast-1.wasabisys.com/je-pds/cog/v1/${selectedDataset.id}/collection.json`;
+    const params = { collectionUrl, band: selectedDataset.band, bbox, width, height };
+
+    const dateStr = buildDateString(selectedDataset.freq);
+    if (dateStr) params.date = dateStr;
+
+    const dataObject = await je.getDataObject(params);
+
+    // Auto-scale: try reading values from dataObject
+    const autoScale = document.getElementById('auto-scale').checked;
+    let scaleMin, scaleMax;
+
+    if (autoScale) {
+      const raw = dataObject.values ?? dataObject.data ?? dataObject._data ?? null;
+      if (raw && raw.length > 0) {
+        let mn = Infinity, mx = -Infinity;
+        for (let i = 0; i < raw.length; i++) {
+          const v = raw[i];
+          if (v !== null && v !== undefined && isFinite(v)) {
+            if (v < mn) mn = v;
+            if (v > mx) mx = v;
+          }
+        }
+        if (isFinite(mn) && isFinite(mx) && mn < mx) {
+          scaleMin = mn; scaleMax = mx;
+        }
+      }
+      // Fallback to category defaults
+      if (scaleMin === undefined) {
+        const def = CATEGORY_DEFAULTS[selectedDataset.category] || { min: 0, max: 100 };
+        scaleMin = def.min; scaleMax = def.max;
+      }
+    } else {
+      scaleMin = parseFloat(document.getElementById('color-min').value);
+      scaleMax = parseFloat(document.getElementById('color-max').value);
+    }
+
+    const colorMap = new je.image.ColorMap({ min: scaleMin, max: scaleMax, colors: je.Colors.JET });
+    const canvas   = je.image.createCanvas(dataObject, colorMap);
+    const dataUrl  = canvas.toDataURL();
+
+    if (currentOverlay) map.removeLayer(currentOverlay);
+    const lb = [[bounds.getSouth(), bounds.getWest()], [bounds.getNorth(), bounds.getEast()]];
+    currentOverlay = L.imageOverlay(dataUrl, lb, { opacity: 0.75, interactive: false }).addTo(map);
+
+    // Update info panel
+    const disp = document.getElementById('tc-display')?.textContent || '';
+    document.getElementById('oi-title').textContent =
+      (CATEGORY_LABELS[selectedDataset.category] || selectedDataset.category).replace(/^.\s/, '');
+    document.getElementById('oi-date').textContent  = disp || '（日付なし）';
+    document.getElementById('oi-range').textContent = `スケール: ${scaleMin.toFixed(2)} ～ ${scaleMax.toFixed(2)}`;
+    document.getElementById('overlay-info').style.display = 'block';
+
+    setStatus('success', `取得完了 ✔ ${disp}`);
+
+  } catch (err) {
+    setStatus('error', 'エラー: ' + err.message);
+    console.error(err);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function setStatus(cls, msg) {
+  const el = document.getElementById('status');
+  el.className = cls;
+  el.textContent = msg;
+}
+
+// ============================================================
+// Place search (Nominatim)
+// ============================================================
+document.getElementById('place-search-btn').addEventListener('click', searchPlace);
+document.getElementById('place-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') searchPlace();
+});
+
+async function searchPlace() {
+  const q = document.getElementById('place-input').value.trim();
+  if (!q) return;
+
+  const resultsEl = document.getElementById('place-results');
+  resultsEl.innerHTML = '<span style="color:#4a6080">検索中...</span>';
+
+  try {
+    const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=5`;
+    const res  = await fetch(url, { headers: { 'Accept-Language': 'ja,en' } });
+    const data = await res.json();
+
+    if (!data.length) {
+      resultsEl.innerHTML = '<span style="color:#f87171">結果が見つかりませんでした</span>';
+      return;
+    }
+
+    resultsEl.innerHTML = '';
+    data.forEach(r => {
+      const div = document.createElement('div');
+      div.className = 'place-result-item';
+      div.textContent = r.display_name;
+      div.addEventListener('click', () => {
+        const s = parseFloat(r.boundingbox[0]);
+        const n = parseFloat(r.boundingbox[1]);
+        const w = parseFloat(r.boundingbox[2]);
+        const e = parseFloat(r.boundingbox[3]);
+        map.flyToBounds([[s, w], [n, e]], { duration: 1.2 });
+        resultsEl.innerHTML = `<span style="color:#4ade80">✔ ${r.display_name.split(',')[0]}</span>`;
+      });
+      resultsEl.appendChild(div);
+    });
+  } catch (err) {
+    resultsEl.innerHTML = `<span style="color:#f87171">エラー: ${err.message}</span>`;
+  }
+}
+
+// ============================================================
+// Auto-scale toggle
+// ============================================================
+document.getElementById('auto-scale').addEventListener('change', function () {
+  document.getElementById('minmax-inputs').style.display = this.checked ? 'none' : 'block';
+});
+</script>
+</body>
+</html>
