@@ -407,7 +407,7 @@ const DATASETS = [
   { id:"JAXA.JASMES_GCOM-W.AMSR2_ic0.v201_south_daily",                        category:"Sea Ice",band:"ic0",        freq:"Daily",              sensor:"GCOM-W/AMSR2（南極）",start:2012,end:null },
   { id:"JAXA.EORC_ALOS-2.PALSAR-2_FNF.v2.1.0_global_yearly",                  category:"FNF",  band:"C",            freq:"Yearly",             sensor:"ALOS-2/PALSAR-2",start:2017, end:null },
   { id:"JAXA.EORC_ALOS.PRISM_AW3D30.v3.2_global",                              category:"DSM",  band:"DSM",          freq:"Static",             sensor:"ALOS/PRISM",     start:2021, end:2021 },
-  { id:"Copernicus.C3S_PROBA-V_LCCS_global_yearly",                             category:"Land Cover",band:"lccs_class",freq:"Yearly",          sensor:"PROBA-V/ESA",    start:1992, end:2019 },
+  { id:"Copernicus.C3S_PROBA-V_LCCS_global_yearly",                             category:"Land Cover",band:"lccs_class",freq:"Yearly",          sensor:"PROBA-V/ESA",    start:2019, end:2019 },
 ];
 
 const CATEGORY_LABELS = {
@@ -889,7 +889,8 @@ async function fetchData() {
     const dataUrl  = canvas.toDataURL();
 
     if (currentOverlay) map.removeLayer(currentOverlay);
-    const lb = [[bounds.getSouth(), bounds.getWest()], [bounds.getNorth(), bounds.getEast()]];
+    // クランプ済みbboxをオーバーレイ配置にも使う（元のboundsを使うとズレる）
+    const lb = [[bbox[1], bbox[0]], [bbox[3], bbox[2]]];
     currentOverlay = L.imageOverlay(dataUrl, lb, { opacity: 0.75, interactive: false }).addTo(map);
 
     // Update info panel
