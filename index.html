@@ -454,10 +454,10 @@ const CATEGORY_DEFAULTS = {
 };
 
 // データセットの対応地理範囲（この範囲外のbboxはクランプ）
+// SPI はバケット(je-pds2)で全球対応のため緯度制限なし
 const BBOX_LIMITS = {
-  'Precip':   { west: -180, south: -60, east: 180, north: 60, label: '南北緯60°以内' },
-  'SPI':      { west: -180, south: -60, east: 180, north: 60, label: '南北緯60°以内' },
-  'Sea Ice':  { west: -180, south: -90, east: 180, north: 90, label: '極域' },
+  'Precip':  { west: -180, south: -60, east: 180, north: 60, label: '南北緯60°以内' },
+  'Sea Ice': { west: -180, south: -90, east: 180, north: 90, label: '極域' },
 };
 
 // ============================================================
@@ -757,22 +757,25 @@ function buildDateString(freq) {
   const year = parseInt(document.getElementById('tc-year')?.value);
   if (!year) return null;
 
-  if (freq === 'Yearly') return new Date(year, 0, 1);
+  // ローカル時刻だとUTC変換でズレるため、必ずUTC日付文字列で生成する
+  const utcDate = (y, m, d) => new Date(`${y}-${pad(m)}-${pad(d)}`);
+
+  if (freq === 'Yearly') return utcDate(year, 1, 1);
 
   if (freq === 'Monthly') {
     const m = parseInt(document.getElementById('tc-month')?.value || 1);
-    return new Date(year, m - 1, 1);
+    return utcDate(year, m, 1);
   }
   if (freq === 'Daily') {
     const m = parseInt(document.getElementById('tc-month-sel')?.value || 1);
     const d = parseInt(document.getElementById('tc-day')?.value || 1);
-    return new Date(year, m - 1, d);
+    return utcDate(year, m, d);
   }
   if (freq === 'Half-monthly') {
     const v = parseInt(document.getElementById('tc-hm')?.value || 1);
     const m = Math.ceil(v / 2);
     const d = v % 2 === 1 ? 1 : 16;
-    return new Date(year, m - 1, d);
+    return utcDate(year, m, d);
   }
   if (freq === '8-day') {
     const p = parseInt(document.getElementById('tc-8d')?.value || 1);
@@ -801,7 +804,13 @@ async function fetchData() {
 
   try {
     const bounds = map.getBounds();
-    let bbox = [bounds.getWest(), bounds.getSouth(), bounds.getEast(), bounds.getNorth()];
+    // 経度は必ず -180〜180 に収める（EPSG:4326の全球表示で範囲外になる場合がある）
+    let bbox = [
+      Math.max(bounds.getWest(),  -180),
+      Math.max(bounds.getSouth(),  -90),
+      Math.min(bounds.getEast(),   180),
+      Math.min(bounds.getNorth(),   90),
+    ];
 
     // データセットの対応範囲でbboxをクランプ
     const bboxLimit = BBOX_LIMITS[selectedDataset.category];
