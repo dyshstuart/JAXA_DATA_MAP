@@ -745,30 +745,29 @@ function syncTimeDisplay(freq) {
 function buildDateString(freq) {
   if (freq === 'Static' || freq === 'Normal (climatology)') return null;
 
-  const year = document.getElementById('tc-year')?.value;
+  const year = parseInt(document.getElementById('tc-year')?.value);
   if (!year) return null;
 
-  if (freq === 'Yearly')  return year;
+  if (freq === 'Yearly') return new Date(year, 0, 1);
 
   if (freq === 'Monthly') {
-    const m = document.getElementById('tc-month')?.value;
-    return `${year}-${pad(m)}`;
+    const m = parseInt(document.getElementById('tc-month')?.value || 1);
+    return new Date(year, m - 1, 1);
   }
   if (freq === 'Daily') {
-    const m = document.getElementById('tc-month-sel')?.value;
-    const d = document.getElementById('tc-day')?.value;
-    return `${year}-${pad(m)}-${pad(d)}`;
+    const m = parseInt(document.getElementById('tc-month-sel')?.value || 1);
+    const d = parseInt(document.getElementById('tc-day')?.value || 1);
+    return new Date(year, m - 1, d);
   }
   if (freq === 'Half-monthly') {
     const v = parseInt(document.getElementById('tc-hm')?.value || 1);
     const m = Math.ceil(v / 2);
     const d = v % 2 === 1 ? 1 : 16;
-    return `${year}-${pad(m)}-${pad(d)}`;
+    return new Date(year, m - 1, d);
   }
   if (freq === '8-day') {
     const p = parseInt(document.getElementById('tc-8d')?.value || 1);
-    const dt = get8DayStartDate(year, p);
-    return `${year}-${pad(dt.getMonth()+1)}-${pad(dt.getDate())}`;
+    return get8DayStartDate(year, p);
   }
   return null;
 }
