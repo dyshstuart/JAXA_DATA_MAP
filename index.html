@@ -366,18 +366,18 @@ const DATASETS = [
   { id:"JAXA.G-Portal_GCOM-C.SGLI_standard.L3-LST.daytime.v3_global_monthly", category:"LST", band:"LST_D",          freq:"Monthly",            sensor:"GCOM-C/SGLI",    start:2018, end:null },
   { id:"JAXA.G-Portal_GCOM-C.SGLI_standard.L3-LST.nighttime.v3_global_daily", category:"LST", band:"LST_N",          freq:"Daily",              sensor:"GCOM-C/SGLI",    start:2018, end:null },
   { id:"JAXA.G-Portal_GCOM-C.SGLI_standard.L3-LST.nighttime.v3_global_monthly",category:"LST",band:"LST_N",          freq:"Monthly",            sensor:"GCOM-C/SGLI",    start:2018, end:null },
-  { id:"JAXA.JASMES_GCOM-C.SGLI_standard.L3-LST.daytime.v3_global_8-day",    category:"LST", band:"LST_D",          freq:"8-day",              sensor:"GCOM-C/SGLI",    start:2020, end:null },
-  { id:"JAXA.JASMES_GCOM-C.SGLI_standard.L3-LST.nighttime.v3_global_8-day",  category:"LST", band:"LST_N",          freq:"8-day",              sensor:"GCOM-C/SGLI",    start:2020, end:null },
+  { id:"JAXA.JASMES_GCOM-C.SGLI_standard.L3-LST.daytime.v3_global_8-day",    category:"LST", band:"LST_D",          freq:"8-day",              sensor:"GCOM-C/SGLI",    start:2020, end:null, bucket:"je-pds2" },
+  { id:"JAXA.JASMES_GCOM-C.SGLI_standard.L3-LST.nighttime.v3_global_8-day",  category:"LST", band:"LST_N",          freq:"8-day",              sensor:"GCOM-C/SGLI",    start:2020, end:null, bucket:"je-pds2" },
   { id:"JAXA.JASMES_GCOM-C.SGLI_standard.L2-LST.daytime.v3_japan_8-day",     category:"LST", band:"LST_D",          freq:"8-day",              sensor:"GCOM-C/SGLI（日本）", start:2020, end:null },
   { id:"JAXA.JASMES_GCOM-C.SGLI_standard.L2-LST.nighttime.v3_japan_8-day",   category:"LST", band:"LST_N",          freq:"8-day",              sensor:"GCOM-C/SGLI（日本）", start:2020, end:null },
-  { id:"JAXA.JASMES_GCOM-C.SGLI_standard.L3-LST.daytime.v3_global_8-day-normal",  category:"LST", band:"LST_D",     freq:"Normal (climatology)",sensor:"GCOM-C/SGLI",    start:2000, end:2022 },
-  { id:"JAXA.JASMES_GCOM-C.SGLI_standard.L3-LST.nighttime.v3_global_monthly-normal",category:"LST",band:"LST_N",    freq:"Normal (climatology)",sensor:"GCOM-C/SGLI",    start:2000, end:2022 },
+  { id:"JAXA.JASMES_GCOM-C.SGLI_standard.L3-LST.daytime.v3_global_8-day-normal",  category:"LST", band:"LST_D",     freq:"Normal (climatology)",sensor:"GCOM-C/SGLI",    start:2000, end:2022, bucket:"je-pds2" },
+  { id:"JAXA.JASMES_GCOM-C.SGLI_standard.L3-LST.nighttime.v3_global_monthly-normal",category:"LST",band:"LST_N",    freq:"Normal (climatology)",sensor:"GCOM-C/SGLI",    start:2000, end:2022, bucket:"je-pds2" },
   { id:"JAXA.G-Portal_GCOM-C.SGLI_standard.L3-SST.daytime.v3_global_daily",  category:"SST", band:"SST",            freq:"Daily",              sensor:"GCOM-C/SGLI",    start:2024, end:null },
   { id:"JAXA.G-Portal_GCOM-C.SGLI_standard.L3-SST.daytime.v3_global_monthly",category:"SST", band:"SST",            freq:"Monthly",            sensor:"GCOM-C/SGLI",    start:2024, end:null },
   { id:"JAXA.G-Portal_GCOM-C.SGLI_standard.L3-SST.nighttime.v3_global_daily",category:"SST", band:"SST",            freq:"Daily",              sensor:"GCOM-C/SGLI",    start:2024, end:null },
   { id:"JAXA.G-Portal_GCOM-C.SGLI_standard.L3-SST.nighttime.v3_global_monthly",category:"SST",band:"SST",           freq:"Monthly",            sensor:"GCOM-C/SGLI",    start:2024, end:null },
-  { id:"JAXA.G-Portal_GCOM-W.AMSR2_standard.L3-SST.daytime.v4_global_daily",  category:"SST", band:"SST",           freq:"Daily",              sensor:"GCOM-W/AMSR2",   start:2012, end:null },
-  { id:"JAXA.G-Portal_GCOM-W.AMSR2_standard.L3-SST.nighttime.v4_global_daily",category:"SST", band:"SST",           freq:"Daily",              sensor:"GCOM-W/AMSR2",   start:2012, end:null },
+  { id:"JAXA.G-Portal_GCOM-W.AMSR2_standard.L3-SST.daytime.v4_global_daily",  category:"SST", band:"SST",           freq:"Daily",              sensor:"GCOM-W/AMSR2",   start:2012, end:null, bucket:"je-pds2" },
+  { id:"JAXA.G-Portal_GCOM-W.AMSR2_standard.L3-SST.nighttime.v4_global_daily",category:"SST", band:"SST",           freq:"Daily",              sensor:"GCOM-W/AMSR2",   start:2012, end:null, bucket:"je-pds2" },
   { id:"JAXA.G-Portal_GCOM-W.AMSR2_standard.L3-SMC.daytime.v3_global_daily",  category:"SMC", band:"SM_D",          freq:"Daily",              sensor:"GCOM-W/AMSR2",   start:2012, end:null },
   { id:"JAXA.G-Portal_GCOM-W.AMSR2_standard.L3-SMC.daytime.v3_global_monthly",category:"SMC", band:"SM_D",          freq:"Monthly",            sensor:"GCOM-W/AMSR2",   start:2012, end:null },
   { id:"JAXA.G-Portal_GCOM-W.AMSR2_standard.L3-SMC.nighttime.v3_global_daily",category:"SMC", band:"SM_N",          freq:"Daily",              sensor:"GCOM-W/AMSR2",   start:2012, end:null },
@@ -392,7 +392,7 @@ const DATASETS = [
   { id:"JAXA.EORC_GSMaP_standard.Gauge.00Z-23Z.v6_daily",                     category:"Precip",band:"hourlyPrecipRate",freq:"Daily",           sensor:"GSMaP/GPM",      start:2000, end:null },
   { id:"JAXA.EORC_GSMaP_standard.Gauge.00Z-23Z.v6_half-monthly",              category:"Precip",band:"hourlyPrecipRate",freq:"Half-monthly",    sensor:"GSMaP/GPM",      start:2000, end:null },
   { id:"JAXA.EORC_GSMaP_standard.Gauge.00Z-23Z.v6_monthly",                   category:"Precip",band:"hourlyPrecipRate",freq:"Monthly",         sensor:"GSMaP/GPM",      start:2000, end:null },
-  { id:"JAXA.EORC_GSMaP_SPI.climate.gnrt6_monthly",                            category:"SPI",  band:"SPI",          freq:"Monthly",            sensor:"GSMaP/GPM",      start:2019, end:null },
+  { id:"JAXA.EORC_GSMaP_SPI.climate.gnrt6_monthly",                            category:"SPI",  band:"SPI",          freq:"Monthly",            sensor:"GSMaP/GPM",      start:2019, end:null, bucket:"je-pds2" },
   { id:"JAXA.G-Portal_GCOM-C.SGLI_standard.L3-AROT.daytime.v3_global_daily",  category:"AOD",  band:"AROT_670",     freq:"Daily",              sensor:"GCOM-C/SGLI",    start:2018, end:null },
   { id:"JAXA.G-Portal_GCOM-C.SGLI_standard.L3-AROT.daytime.v3_global_monthly",category:"AOD",  band:"AROT_670",     freq:"Monthly",            sensor:"GCOM-C/SGLI",    start:2018, end:null },
   { id:"JAXA.JASMES_Terra.MODIS-Aqua.MODIS_taua.v811_global_daily",            category:"AOD",  band:"taua_550",     freq:"Daily",              sensor:"Terra+Aqua MODIS",start:2013, end:null },
@@ -822,7 +822,18 @@ async function fetchData() {
     const width  = mapEl.clientWidth;
     const height = mapEl.clientHeight;
 
-    const collectionUrl = `https://s3.ap-northeast-1.wasabisys.com/je-pds/cog/v1/${selectedDataset.id}/collection.json`;
+    const bucket = selectedDataset.bucket || 'je-pds';
+    const collectionUrl = `https://s3.ap-northeast-1.wasabisys.com/${bucket}/cog/v1/${selectedDataset.id}/collection.json`;
+
+    // コレクションURLの存在を事前確認
+    setStatus('loading', 'コレクション確認中...');
+    const headRes = await fetch(collectionUrl, { method: 'HEAD' }).catch(() => null);
+    if (!headRes || !headRes.ok) {
+      setStatus('error', `コレクションが見つかりません（ID未確認）。このデータセットはまだ利用できない可能性があります。`);
+      btn.disabled = false;
+      return;
+    }
+
     const params = { collectionUrl, band: selectedDataset.band, bbox, width, height };
 
     const dateStr = buildDateString(selectedDataset.freq);
